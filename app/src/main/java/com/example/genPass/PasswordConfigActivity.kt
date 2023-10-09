@@ -3,13 +3,14 @@ package com.example.genPass
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Intent
+import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.widget.ArrayAdapter
+import android.view.View
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.SeekBar
 import android.widget.TextView
-import androidx.appcompat.app.AppCompatActivity
+import com.example.genPass.Password
 import com.google.android.material.textfield.TextInputEditText
 import java.util.Random
 
@@ -25,9 +26,8 @@ class PasswordConfigActivity : AppCompatActivity() {
     private lateinit var deleteButton: Button
     private lateinit var cancelButton: Button
     private lateinit var seekBarValueTextView: TextView
-
-    private val passwordList = mutableListOf<Password>()
-    private lateinit var passwordListAdapter: ArrayAdapter<Password>
+    private var selectedPassword: Password? = null
+    private var position: Int = -1
 
     @SuppressLint("NewApi")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -45,10 +45,8 @@ class PasswordConfigActivity : AppCompatActivity() {
         cancelButton = findViewById(R.id.cancelButton)
         seekBarValueTextView = findViewById(R.id.seekBarValueTextView)
 
-        //define o valor do seekbar
         lengthSeekBar.min = 4
         lengthSeekBar.max = 20
-        // Define o valor inicial para o SeekBar
         lengthSeekBar.progress = 4
 
         lengthSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
@@ -65,36 +63,38 @@ class PasswordConfigActivity : AppCompatActivity() {
             }
         })
 
+        selectedPassword = intent.getParcelableExtra<Password>("selectedPassword")
+        position = intent.getIntExtra("position", -1)
 
-        generateButton.setOnClickListener {
-            // Implemente a lógica para gerar a senha com base nas configurações especificadas
-            val generatedPassword = generatePassword()
+        if (selectedPassword != null) {
+            populateFields(selectedPassword!!)
 
-            // Crie um Intent para retornar a senha gerada
-            val resultIntent = Intent()
-            resultIntent.putExtra("generatedPassword", generatedPassword)
-            setResult(Activity.RESULT_OK, resultIntent)
+            // Exibe os botões de alterar e excluir
+            alterButton.visibility = View.VISIBLE
+            deleteButton.visibility = View.VISIBLE
 
-            finish()
-        }
+            // Esconde o botão "Gerar" no modo de edição
+            generateButton.visibility = View.INVISIBLE
 
+            // Configura o clique do botão "Alterar"
+            alterButton.setOnClickListener {
+                val updatedPassword = createUpdatedPassword()
+                returnUpdatedPassword(updatedPassword)
+            }
 
-        alterButton.setOnClickListener {
-            // Implemente a lógica para atualizar a senha com base nas configurações especificadas
-            val updatedPassword = generatePassword()
+            // Configura o clique do botão "Excluir"
+            deleteButton.setOnClickListener {
+                returnDeletedPassword()
+            }
+        } else {
+            // Modo de criação de senha, esconde os botões de alterar e excluir
+            alterButton.visibility = View.GONE
+            deleteButton.visibility = View.GONE
 
-            // Retorne a senha atualizada para a MainActivity
-            val resultIntent = Intent()
-            resultIntent.putExtra("updatedPassword", updatedPassword)
-            setResult(Activity.RESULT_OK, resultIntent)
-
-            // Finalize a atividade da PasswordConfigActivity e retorne à MainActivity
-            finish()
-        }
-
-        deleteButton.setOnClickListener {
-            // Implemente a lógica para excluir a senha (você precisa implementar isso)
-            // Retorne uma indicação de que a senha foi excluída para a MainActivity
+            generateButton.setOnClickListener {
+                val generatedPassword = generatePassword()
+                returnPassword(generatedPassword)
+            }
         }
 
         cancelButton.setOnClickListener {
@@ -145,5 +145,53 @@ class PasswordConfigActivity : AppCompatActivity() {
         }
 
         return passwordBuilder.toString()
+    }
+
+    private fun populateFields(selectedPassword: Password) {
+        // Preenche os campos com os dados da senha existente
+        descriptionEditText.setText(selectedPassword.description)
+        lengthSeekBar.progress = selectedPassword.length
+        uppercaseCheckBox.isChecked = selectedPassword.includeUppercase
+        numbersCheckBox.isChecked = selectedPassword.includeNumbers
+        specialCharsCheckBox.isChecked = selectedPassword.includeSpecialChars
+    }
+
+    private fun createUpdatedPassword(): Password {
+        val updatedDescription = descriptionEditText.text.toString()
+        val updatedLength = lengthSeekBar.progress
+        val updatedUppercase = uppercaseCheckBox.isChecked
+        val updatedNumbers = numbersCheckBox.isChecked
+        val updatedSpecialChars = specialCharsCheckBox.isChecked
+
+        return Password(
+            updatedDescription,
+            updatedLength,
+            updatedUppercase,
+            updatedNumbers,
+            updatedSpecialChars
+        )
+    }
+
+    private fun returnPassword(password: String) {
+        val resultIntent = Intent()
+        resultIntent.putExtra("generatedPassword", password)
+        setResult(Activity.RESULT_OK, resultIntent)
+        finish()
+    }
+
+    private fun returnUpdatedPassword(updatedPassword: Password) {
+        val resultIntent = Intent()
+        resultIntent.putExtra("updatedPassword", updatedPassword)
+        resultIntent.putExtra("position", position) // Passa a posição de volta
+        setResult(Activity.RESULT_OK, resultIntent)
+        finish()
+    }
+
+    private fun returnDeletedPassword() {
+        val resultIntent = Intent()
+        resultIntent.putExtra("deletedPassword", true)
+        resultIntent.putExtra("position", position) // Passa a posição de volta
+        setResult(Activity.RESULT_OK, resultIntent)
+        finish()
     }
 }
