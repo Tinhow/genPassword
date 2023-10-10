@@ -4,11 +4,11 @@ import android.os.Parcel
 import android.os.Parcelable
 
 data class Password(
-    val description: String,
-    val length: Int,
-    val includeUppercase: Boolean,
-    val includeNumbers: Boolean,
-    val includeSpecialChars: Boolean
+    var description: String,
+    var length: Int,
+    var includeUppercase: Boolean,
+    var includeNumbers: Boolean,
+    var includeSpecialChars: Boolean
 ) : Parcelable {
 
     constructor(parcel: Parcel) : this(

@@ -3,15 +3,13 @@ package com.example.genPass
 import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.widget.ArrayAdapter
 import android.widget.ListView
 import android.widget.Toast
-import com.example.genPass.Password
-import com.example.genPass.PasswordConfigActivity
-import com.example.genPass.R
+import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 
 class MainActivity : AppCompatActivity() {
@@ -26,7 +24,10 @@ class MainActivity : AppCompatActivity() {
 
         listView = findViewById(R.id.listView)
         passwordList = mutableListOf()
-        adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, passwordList.map { it.description })
+        adapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_list_item_1,
+            passwordList.map { it.description })
         listView.adapter = adapter
 
         val fab = findViewById<FloatingActionButton>(R.id.buttonAdd)
@@ -55,10 +56,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun copyToClipboard(text: String) {
-        val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         val clip = ClipData.newPlainText("Senha", text)
         clipboard.setPrimaryClip(clip)
-        Toast.makeText(this, "Senha copiada para a área de transferência", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Senha copiada para a área de transferência", Toast.LENGTH_SHORT)
+            .show()
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -71,30 +73,48 @@ class MainActivity : AppCompatActivity() {
 
             if (generatedPassword != null) {
                 val newPassword = Password(generatedPassword, 0, false, false, false)
-                passwordList.add(newPassword) // Adiciona a senha à lista
-                adapter.add(newPassword.description)
-                adapter.notifyDataSetChanged() // Atualiza a lista com a senha gerada
+                passwordList.add(newPassword)
             } else if (updatedPassword != null) {
                 val position = data.getIntExtra("position", -1)
                 if (position != -1) {
+                    // Substitua a senha antiga pela senha atualizada na lista
                     passwordList[position] = updatedPassword
-                    adapter.clear()
-                    adapter.addAll(passwordList.map { it.description })
-                    adapter.notifyDataSetChanged() // Atualiza a lista com a senha atualizada
                 }
             } else if (isPasswordDeleted == true) {
                 val position = data.getIntExtra("position", -1)
                 if (position != -1) {
                     passwordList.removeAt(position)
-                    adapter.clear()
-                    adapter.addAll(passwordList.map { it.description })
-                    adapter.notifyDataSetChanged() // Atualiza a lista após a exclusão
+                }
+            }else if (updatedPassword != null) {
+                val position = data.getIntExtra("position", -1)
+                if (position != -1) {
+                    // Substitua a senha antiga pela senha atualizada na lista
+                    passwordList[position] = updatedPassword
+
+                    // Notifique o adaptador de que os dados foram alterados
+                    adapter.notifyDataSetChanged()
                 }
             }
+            // Notifique o adaptador de que os dados foram alterados
+            adapter.clear()
+            adapter.addAll(passwordList.map { it.description })
+            adapter.notifyDataSetChanged()
         }
     }
 
+
+
     companion object {
         private const val REQUEST_PASSWORD_CONFIG = 1
+        private lateinit var passwordList: MutableList<Password>
+
+        fun getPasswordList(): MutableList<Password> {
+            if (!::passwordList.isInitialized) {
+                passwordList = mutableListOf()
+            }
+            return passwordList
+        }
     }
+
+
 }

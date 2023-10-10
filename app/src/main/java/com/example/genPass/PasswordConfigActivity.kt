@@ -28,6 +28,8 @@ class PasswordConfigActivity : AppCompatActivity() {
     private lateinit var seekBarValueTextView: TextView
     private var selectedPassword: Password? = null
     private var position: Int = -1
+    private lateinit var passwordList: MutableList<Password>
+
 
     @SuppressLint("NewApi")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -63,40 +65,62 @@ class PasswordConfigActivity : AppCompatActivity() {
             }
         })
 
+        // Obtenha a lista de senhas do Intent
+        passwordList = intent.getParcelableArrayListExtra<Password>("passwordList") ?: mutableListOf()
+
+        // Obtenha os dados da senha selecionada, se houver
         selectedPassword = intent.getParcelableExtra<Password>("selectedPassword")
         position = intent.getIntExtra("position", -1)
 
         if (selectedPassword != null) {
+            // Preencha os campos com os dados da senha existente
             populateFields(selectedPassword!!)
 
-            // Exibe os botões de alterar e excluir
+            // Exiba os botões de alterar e excluir
             alterButton.visibility = View.VISIBLE
             deleteButton.visibility = View.VISIBLE
 
-            // Esconde o botão "Gerar" no modo de edição
+            // Esconda o botão "Gerar" no modo de edição
             generateButton.visibility = View.INVISIBLE
 
-            // Configura o clique do botão "Alterar"
             alterButton.setOnClickListener {
-                val updatedPassword = createUpdatedPassword()
+                val updatedPassword = createUpdatedPassword(selectedPassword ?: Password("", 0, false, false, false))
+
+                // Gere uma nova senha
+                val generatedPassword = generatePassword()
+
+                // Atualize a senha atual para a nova senha gerada
+                updatedPassword.description = generatedPassword
+
+                // Substitua a senha antiga pela senha atualizada na lista, se a posição for válida
+                if (position in 0 until passwordList.size) {
+                    passwordList[position] = updatedPassword
+                }
+
+                // Atualize os campos com os dados da senha atualizada
+                populateFields(updatedPassword)
+
+                // Use a função returnUpdatedPassword para enviar a senha atualizada de volta para a MainActivity
                 returnUpdatedPassword(updatedPassword)
             }
 
-            // Configura o clique do botão "Excluir"
             deleteButton.setOnClickListener {
                 returnDeletedPassword()
             }
         } else {
-            // Modo de criação de senha, esconde os botões de alterar e excluir
+            // Modo de criação de senha, esconda os botões de alterar e excluir
             alterButton.visibility = View.GONE
             deleteButton.visibility = View.GONE
 
+            // Configure o clique do botão "Gerar"
             generateButton.setOnClickListener {
                 val generatedPassword = generatePassword()
                 returnPassword(generatedPassword)
             }
+
         }
 
+        // Configure o clique do botão "Cancelar"
         cancelButton.setOnClickListener {
             setResult(Activity.RESULT_CANCELED)
             finish()
@@ -148,7 +172,7 @@ class PasswordConfigActivity : AppCompatActivity() {
     }
 
     private fun populateFields(selectedPassword: Password) {
-        // Preenche os campos com os dados da senha existente
+        // Preencha os campos com os dados da senha existente
         descriptionEditText.setText(selectedPassword.description)
         lengthSeekBar.progress = selectedPassword.length
         uppercaseCheckBox.isChecked = selectedPassword.includeUppercase
@@ -156,20 +180,22 @@ class PasswordConfigActivity : AppCompatActivity() {
         specialCharsCheckBox.isChecked = selectedPassword.includeSpecialChars
     }
 
-    private fun createUpdatedPassword(): Password {
+    // No método createUpdatedPassword, atualize a senha existente em vez de criar uma nova
+    private fun createUpdatedPassword(originalPassword: Password): Password {
         val updatedDescription = descriptionEditText.text.toString()
         val updatedLength = lengthSeekBar.progress
         val updatedUppercase = uppercaseCheckBox.isChecked
         val updatedNumbers = numbersCheckBox.isChecked
         val updatedSpecialChars = specialCharsCheckBox.isChecked
 
-        return Password(
-            updatedDescription,
-            updatedLength,
-            updatedUppercase,
-            updatedNumbers,
-            updatedSpecialChars
-        )
+        // Atualize os dados da senha existente
+        originalPassword.description = updatedDescription
+        originalPassword.length = updatedLength
+        originalPassword.includeUppercase = updatedUppercase
+        originalPassword.includeNumbers = updatedNumbers
+        originalPassword.includeSpecialChars = updatedSpecialChars
+
+        return originalPassword // Retorna a senha existente atualizada
     }
 
     private fun returnPassword(password: String) {
@@ -179,13 +205,18 @@ class PasswordConfigActivity : AppCompatActivity() {
         finish()
     }
 
+    // Em PasswordConfigActivity.kt
+
     private fun returnUpdatedPassword(updatedPassword: Password) {
         val resultIntent = Intent()
         resultIntent.putExtra("updatedPassword", updatedPassword)
-        resultIntent.putExtra("position", position) // Passa a posição de volta
+        resultIntent.putExtra("position", position)
         setResult(Activity.RESULT_OK, resultIntent)
         finish()
     }
+
+
+
 
     private fun returnDeletedPassword() {
         val resultIntent = Intent()
